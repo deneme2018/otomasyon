@@ -10,11 +10,17 @@ import re
 
 # --- Ayarlar ---
 chrome_options = Options()
-chrome_options.add_argument("--start-maximized")
+
+# GitHub Actions ortamında sorunsuz çalışması için gerekli ayarlar:
+chrome_options.add_argument("--headless")              # Tarayıcının arayüz olmadan (arka planda) çalışmasını sağlar
+chrome_options.add_argument("--no-sandbox")            # Güvenlik kısıtlamalarını es geçer (sunucular için gerekli)
+chrome_options.add_argument("--disable-dev-shm-usage") # Bellek sorunlarını engeller (Linux sunucular için gerekli)
+# chrome_options.add_argument("--start-maximized")     # Headless modda bu ayara gerek yoktur
 
 SEARCH_KEYWORD = "mum"
 
-service = Service()
+# GitHub Actions ortamında Service() genellikle yeterlidir, ancak gerekirse path belirtilebilir.
+service = Service() 
 driver = webdriver.Chrome(service=service, options=chrome_options)
 driver.get("https://www.trendyol.com/")
 
@@ -35,21 +41,24 @@ try:
 
     parent_keywords = []
     for s in suggestions:
-        text = re.sub(r'[\r\n]+', ' ', s.text.strip())
+        # Regex kullanmak yerine sadece .text.strip() kullanmak yeterli olabilir, 
+        # ancak kodunuzdaki regex'i koruyorum.
+        text = re.sub(r'[\r\n]+', ' ', s.text.strip()) 
         if text and text != SEARCH_KEYWORD:
             parent_keywords.append(text)
     print(f"✅ {len(parent_keywords)} ana kategori bulundu.")
 
 except Exception as e:
-    print(f"❌ Hata: {e}")
-    driver.quit()
+    print(f"❌ Hata (1. Seviye): {e}")
+    # Hata durumunda dahi driver'ı kapatıp çıkmak önemlidir.
+    driver.quit() 
     exit()
 
 # --- 2. Seviye: Alt (Child) Kategoriler ---
 print("\n🔄 Alt kategoriler aranıyor...")
 for parent in parent_keywords:
     try:
-        print(f"   -> {parent} için alt kategoriler toplanıyor...")
+        print(f"    -> {parent} için alt kategoriler toplanıyor...")
         search_box.clear()
         time.sleep(1)
         search_box.send_keys(parent)
@@ -64,10 +73,10 @@ for parent in parent_keywords:
                     "child_keyword": child_text
                 })
     except Exception as e:
-        print(f"   -> Hata oluştu: {e}")
+        print(f"    -> Hata oluştu: {e}")
         continue
 
-driver.quit()
+driver.quit() # Tüm işlemler bittiğinde tarayıcıyı kapat.
 
 # --- CSV olarak kaydet ---
 df = pd.DataFrame(data)
