@@ -1,27 +1,56 @@
 name: Daily Scraper
+# Türkçe isimleri, İngilizce (standart) isimlerle değiştirdim.
 
 on:
   schedule:
     - cron: "0 9 * * *"  # Her gün sabah 09:00'da çalışır
-  workflow_dispatch:
+  workflow_dispatch: # GitHub arayüzünden manuel tetikleme izni verir
 
 jobs:
   run-scraper:
     runs-on: ubuntu-latest
+    
+    # 📌 EN ÖNEMLİ DEĞİŞİKLİK: Bu izin satırı, botun depoya yazma yetkisi verir.
+    permissions:
+      contents: write 
 
     steps:
-      - name: Repo'yu çek
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Python ortamını kur
+      - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Gerekli paketleri yükle
+      # 📌 YENİ ADIM: Selenium için tarayıcıyı (Chrome) kurar
+      - name: Install Google Chrome
         run: |
-          pip install -r requirements.txt
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
 
-      - name: Scraper'ı çalıştır
+      - name: Install dependencies (from requirements.txt)
         run: |
-          python trendyol-search.py
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt # requirements.txt dosyanızın var olduğunu varsayıyoruz
+
+      - name: Run Scraper
+        run: python trendyol-search.py
+
+      # 📌 YENİ ADIM: Oluşan CSV dosyasını depoya geri yükler
+      - name: Commit and Push Results
+        run: |
+          # Git ayarlarını yap
+          git config user.name github-actions[bot]
+          git config user.email github-actions[bot]@users.noreply.github.com
+          
+          # Yeni oluşturulan CSV dosyasını Git'e ekle
+          git add trendyol_keywords.csv
+          
+          # Eğer bir değişiklik varsa, kaydet ve GitHub'a yükle
+          if git diff --cached --exit-code; then
+            echo "No changes to commit"
+          else
+            git commit -m "🤖 [Automated] Güncel Trendyol anahtar kelimeleri çekildi."
+            git push
+          fi
