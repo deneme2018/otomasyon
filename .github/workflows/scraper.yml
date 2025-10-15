@@ -1,56 +1,64 @@
-name: Daily Matriks News Scraper
+name: Matriks Haberleri Günlük Çekim
+
+# İş akışının ne zaman çalışacağını belirler
 
 on:
+  # Bu, GitHub arayüzünden manuel olarak tetikleme imkanı verir
+  workflow_dispatch:
+
   schedule:
-    # Türkiye saatine (UTC+3) göre sabah 09:00'da çalışır (UTC 06:00).
-    - cron: "0 6 * * *"
-  workflow_dispatch: # GitHub arayüzünden manuel tetikleme izni verir
+    # Cron zamanlaması UTC (Eşgüdümlü Evrensel Zaman) kullanır.
+    # Türkiye Saati (TRT/GMT+3) olduğu için 3 saat geri alınıp UTC saatleri belirlenmiştir:
+    # 09:00 TRT -> 06:00 UTC
+    # 15:00 TRT -> 12:00 UTC
+    # 19:00 TRT -> 16:00 UTC
+    - cron: "0 6,12,16 * * *" # Her gün 3 farklı saatte çalışır
 
 jobs:
   run-scraper:
-    runs-on: ubuntu-latest
-    
-    # Botun depoya yazma (CSV ve ID dosyalarını güncelleme) yetkisi ZORUNLUDUR.
+    # Botun değişen CSV ve ID dosyalarını depoya yazması için bu yetki ZORUNLUDUR.
     permissions:
-      contents: write 
+      contents: write
+      
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Depoyu Çıkar (Checkout)
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.10
+      - name: Python 3.10 Kurulumu
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Install Dependencies (requests, bs4, pandas)
+      - name: Gerekli Kütüphaneleri Kur (requests, bs4, pandas)
         run: |
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4 pandas
-          # requirements.txt dosyanız varsa, pip install -r requirements.txt da kullanabilirsiniz.
+          # Eğer bir requirements.txt dosyanız varsa, bunun yerine
+          # pip install -r requirements.txt
+          # komutunu da kullanabilirsiniz.
 
-      # --- HATA DÜZELTİLDİ ---
-      # Python dosyası ana dizinde olduğu için yol belirtmeye gerek yoktur.
-      # Dosya adının, deponuzdaki Python dosyasının adıyla TAMAMEN eşleştiğinden emin olun.
-      - name: Run Scraper and Update Archives
-        # VARSAYIM: Deponuzdaki dosya adı matriks_haber.py'dir.
+      # Python dosyanızın adının 'matriks_haber.py' olduğunu varsayıyoruz.
+      - name: Haberleri Çek ve Arşivleri Güncelle
         run: python matriks_haber.py
 
-      # --- COMMIT VE PUSH İŞLEMİ ---
-      - name: Commit and Push Results
+      # --- COMMIT VE PUSH İŞLEMİ (Değişen dosyaları kaydetme) ---
+      - name: Değişen Dosyaları Kaydet ve GitHub'a Yükle
         run: |
-          # Git ayarlarını yap (otomatik commit için bot kimliği kullan)
+          # Otomatik commit için bot kimliğini ayarla
           git config user.name github-actions[bot]
           git config user.email github-actions[bot]@users.noreply.github.com
           
-          # Oluşan CSV ve ID kontrol dosyalarını Git'e ekle
-          # Çıktı dosya adları, Python kodunuzdaki gibi olmalıdır.
+          # Oluşan/güncellenen dosyaları Git'e ekle
           git add matriks_haber_arsivi.csv kayitli_haber_idleri.txt
           
-          # Eğer bir değişiklik varsa (yani yeni haber geldiyse), kaydet ve GitHub'a yükle
+          # Eğer 'git add' işleminden sonra bir değişiklik tespit edilirse commit yap
           if git diff --cached --exit-code; then
-            echo "No new changes to commit"
+            echo "Yeni değişiklik yok, commit atlanıyor."
           else
+            # Değişiklik varsa commit ve push işlemini yap
             git commit -m "🤖 [Automated] Matriks haberleri güncellendi (Tarih: $(date +%Y-%m-%d))"
             git push
           fi
+```eof
