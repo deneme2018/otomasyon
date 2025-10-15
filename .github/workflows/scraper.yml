@@ -2,8 +2,7 @@ name: Daily Matriks News Scraper
 
 on:
   schedule:
-    # Türkiye saatine (UTC+3) göre sabah 09:00'da çalışması için,
-    # UTC'ye göre 06:00 (0 6 * * *') olarak ayarlanmıştır.
+    # Türkiye saatine (UTC+3) göre sabah 09:00'da çalışır (UTC 06:00).
     - cron: "0 6 * * *"
   workflow_dispatch: # GitHub arayüzünden manuel tetikleme izni verir
 
@@ -11,7 +10,7 @@ jobs:
   run-scraper:
     runs-on: ubuntu-latest
     
-    # Botun depoya yazma (CSV ve ID dosyalarını güncelleme) yetkisi vermesi ZORUNLUDUR.
+    # Botun depoya yazma (CSV ve ID dosyalarını güncelleme) yetkisi ZORUNLUDUR.
     permissions:
       contents: write 
 
@@ -24,15 +23,18 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Dependencies
+      - name: Install Dependencies (requests, bs4, pandas)
         run: |
           python -m pip install --upgrade pip
-          # 'requests', 'beautifulsoup4' ve 'pandas' kütüphanelerini kur
           pip install requests beautifulsoup4 pandas
+          # requirements.txt dosyanız varsa, pip install -r requirements.txt da kullanabilirsiniz.
 
+      # --- HATA DÜZELTİLDİ ---
+      # Python dosyası ana dizinde olduğu için yol belirtmeye gerek yoktur.
+      # Dosya adının, deponuzdaki Python dosyasının adıyla TAMAMEN eşleştiğinden emin olun.
       - name: Run Scraper and Update Archives
-        # Lütfen bu satırdaki dosya adının, Requests tabanlı Python dosyanızın adı olduğundan emin olun.
-        run: python matriks_haber_cekici_requests.py
+        # VARSAYIM: Deponuzdaki dosya adı matriks_haber.py'dir.
+        run: python matriks_haber.py
 
       # --- COMMIT VE PUSH İŞLEMİ ---
       - name: Commit and Push Results
@@ -42,13 +44,13 @@ jobs:
           git config user.email github-actions[bot]@users.noreply.github.com
           
           # Oluşan CSV ve ID kontrol dosyalarını Git'e ekle
-          # Bu dosyalar arşiv ve tekrar kontrolü için gereklidir.
+          # Çıktı dosya adları, Python kodunuzdaki gibi olmalıdır.
           git add matriks_haber_arsivi.csv kayitli_haber_idleri.txt
           
           # Eğer bir değişiklik varsa (yani yeni haber geldiyse), kaydet ve GitHub'a yükle
           if git diff --cached --exit-code; then
-            echo "No new news to commit"
+            echo "No new changes to commit"
           else
-            git commit -m "🤖 [Automated] Matriks haberleri güncellendi (${{ github.event.schedule }})"
+            git commit -m "🤖 [Automated] Matriks haberleri güncellendi (Tarih: $(date +%Y-%m-%d))"
             git push
           fi
