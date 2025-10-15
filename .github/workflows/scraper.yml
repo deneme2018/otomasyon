@@ -1,16 +1,17 @@
-name: Daily Scraper
-# Türkçe isimleri, İngilizce (standart) isimlerle değiştirdim.
+name: Daily Matriks News Scraper
 
 on:
   schedule:
-    - cron: "0 9 * * *"  # Her gün sabah 09:00'da çalışır
+    # Türkiye saatine (UTC+3) göre sabah 09:00'da çalışması için,
+    # UTC'ye göre 06:00 (0 6 * * *') olarak ayarlanmıştır.
+    - cron: "0 6 * * *"
   workflow_dispatch: # GitHub arayüzünden manuel tetikleme izni verir
 
 jobs:
   run-scraper:
     runs-on: ubuntu-latest
     
-    # 📌 EN ÖNEMLİ DEĞİŞİKLİK: Bu izin satırı, botun depoya yazma yetkisi verir.
+    # Botun depoya yazma (CSV ve ID dosyalarını güncelleme) yetkisi vermesi ZORUNLUDUR.
     permissions:
       contents: write 
 
@@ -23,34 +24,31 @@ jobs:
         with:
           python-version: '3.10'
 
-      # 📌 YENİ ADIM: Selenium için tarayıcıyı (Chrome) kurar
-      - name: Install Google Chrome
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y google-chrome-stable
-
-      - name: Install dependencies (from requirements.txt)
+      - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt # requirements.txt dosyanızın var olduğunu varsayıyoruz
+          # 'requests', 'beautifulsoup4' ve 'pandas' kütüphanelerini kur
+          pip install requests beautifulsoup4 pandas
 
-      - name: Run Scraper
-        run: python trendyol-search.py
+      - name: Run Scraper and Update Archives
+        # Lütfen bu satırdaki dosya adının, Requests tabanlı Python dosyanızın adı olduğundan emin olun.
+        run: python matriks_haber_cekici_requests.py
 
-      # 📌 YENİ ADIM: Oluşan CSV dosyasını depoya geri yükler
+      # --- COMMIT VE PUSH İŞLEMİ ---
       - name: Commit and Push Results
         run: |
-          # Git ayarlarını yap
+          # Git ayarlarını yap (otomatik commit için bot kimliği kullan)
           git config user.name github-actions[bot]
           git config user.email github-actions[bot]@users.noreply.github.com
           
-          # Yeni oluşturulan CSV dosyasını Git'e ekle
-          git add trendyol_keywords.csv
+          # Oluşan CSV ve ID kontrol dosyalarını Git'e ekle
+          # Bu dosyalar arşiv ve tekrar kontrolü için gereklidir.
+          git add matriks_haber_arsivi.csv kayitli_haber_idleri.txt
           
-          # Eğer bir değişiklik varsa, kaydet ve GitHub'a yükle
+          # Eğer bir değişiklik varsa (yani yeni haber geldiyse), kaydet ve GitHub'a yükle
           if git diff --cached --exit-code; then
-            echo "No changes to commit"
+            echo "No new news to commit"
           else
-            git commit -m "🤖 [Automated] Güncel Trendyol anahtar kelimeleri çekildi."
+            git commit -m "🤖 [Automated] Matriks haberleri güncellendi (${{ github.event.schedule }})"
             git push
           fi
