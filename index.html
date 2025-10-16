@@ -1,178 +1,171 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matriks Haber Arşivi</title>
-    <!-- Tailwind CSS ve Inter Font -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        .card { transition: transform 0.2s, box-shadow 0.2s; }
-        .card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Matriks Haber Arşivi</title>
+
+  <!-- Tailwind CSS ve Inter Font -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f3f4f6;
+    }
+    .card {
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+                  0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+  </style>
 </head>
 <body class="min-h-screen">
 
-    <div id="app" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+  <div id="app" class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+    
+    <!-- Başlık ve Filtreleme Alanı -->
+    <header class="mb-8 bg-white shadow-lg rounded-xl p-6">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Matriks Haber Arşivi</h1>
+      <p class="text-gray-500 mb-6">GitHub Actions ile çekilen güncel haber arşivi.</p>
+
+      <div class="flex flex-col sm:flex-row gap-4">
+        <input type="text" id="search-input" placeholder="Haberlerde ara (Konu, Tarih)..." 
+              class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+              oninput="filterNews()">
         
-        <!-- Başlık ve Filtreleme Alanı -->
-        <header class="mb-8 bg-white shadow-lg rounded-xl p-6">
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">Matriks Haber Arşivi</h1>
-            <p class="text-gray-500 mb-6">GitHub Actions ile çekilen kayıtlı haberler.</p>
-
-            <div class="flex flex-col sm:flex-row gap-4">
-                <input type="text" id="search-input" placeholder="Haberlerde ara (Konu, Tarih)..." 
-                       class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 shadow-sm"
-                       oninput="filterNews()">
-                
-                <div class="flex items-center space-x-2 text-sm text-gray-500">
-                    <span id="news-count">0</span> haber gösteriliyor
-                </div>
-            </div>
-        </header>
-
-        <!-- Haber Listesi / Yükleniyor Durumu -->
-        <div id="loading-spinner" class="text-center py-12">
-            <svg class="animate-spin h-8 w-8 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <p class="mt-4 text-gray-600">Veriler yükleniyor...</p>
+        <div class="flex items-center space-x-2 text-sm text-gray-500">
+          <span id="news-count">0</span> haber gösteriliyor
         </div>
+      </div>
+    </header>
 
-        <div id="news-list" class="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            <!-- Haber kartları buraya JavaScript ile eklenecek -->
-        </div>
-
-        <div id="no-results" class="hidden text-center py-12 text-gray-500">
-            <p class="text-lg font-semibold">🔍 Arama sonucunuzla eşleşen haber bulunamadı.</p>
-            <p class="text-sm mt-2">Filtreyi temizlemeyi deneyin.</p>
-        </div>
+    <!-- Haber Listesi / Yükleniyor Durumu -->
+    <div id="loading-spinner" class="text-center py-12">
+      <svg class="animate-spin h-8 w-8 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <p class="mt-4 text-gray-600">Veriler yükleniyor...</p>
     </div>
 
-    <script>
-        // --- Sabitler ve Global Değişkenler ---
-        const CSV_FILE_PATH = "matriks_haber_arsivi.csv";
-        let allNews = [];
-        const newsListElement = document.getElementById('news-list');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        const searchInput = document.getElementById('search-input');
-        const newsCountElement = document.getElementById('news-count');
-        const noResultsElement = document.getElementById('no-results');
+    <div id="news-list" class="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      <!-- Haber kartları JavaScript ile buraya eklenecek -->
+    </div>
 
-        // --- Yardımcı Fonksiyon: CSV'yi Ayrıştırma (Sizin Python mantığını taklit eder) ---
-        function parseCSV(csvText) {
-            // CSV'yi satırlara ayır
-            const lines = csvText.trim().split('\n');
-            if (lines.length === 0) return [];
+    <div id="no-results" class="hidden text-center py-12 text-gray-500">
+      <p class="text-lg font-semibold">🔍 Arama sonucunuzla eşleşen haber bulunamadı.</p>
+      <p class="text-sm mt-2">Filtreyi temizlemeyi deneyin.</p>
+    </div>
+  </div>
 
-            // Başlık satırını al ve sütunları ayır (noktalı virgül ile)
-            const headers = lines[0].split(';');
-            
-            const data = [];
-            
-            // Veri satırlarını döngüye al (başlık satırını atla)
-            for (let i = 1; i < lines.length; i++) {
-                // Her satırı noktalı virgül ile ayır
-                const values = lines[i].split(';');
-                if (values.length !== headers.length) continue; // Hatalı satırları atla
+  <script>
+    // --- Ayarlar ---
+    // Mutlak yol: Github Pages URL’n ile değiştir (örnek: https://deneme2018.github.io/otomasyon/matriks_haber_arsivi.csv)
+    const CSV_FILE_PATH = "https://deneme2018.github.io/otomasyon/matriks_haber_arsivi.csv";
 
-                const item = {};
-                
-                // Başlıkları ve değerleri eşleştir
-                headers.forEach((header, index) => {
-                    item[header.trim()] = values[index].trim();
-                });
-                data.push(item);
-            }
-            return data;
-        }
+    let allNews = [];
+    const newsListElement = document.getElementById('news-list');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const searchInput = document.getElementById('search-input');
+    const newsCountElement = document.getElementById('news-count');
+    const noResultsElement = document.getElementById('no-results');
 
-        // --- Veriyi Çekme ve Başlatma ---
-        async function fetchAndRenderNews() {
-            loadingSpinner.classList.remove('hidden');
-            newsListElement.innerHTML = '';
-            
-            try {
-                // CSV dosyasını requests/fetch ile çek
-                const response = await fetch(CSV_FILE_PATH);
-                if (!response.ok) {
-                    throw new Error(`Dosya bulunamadı veya yüklenemedi: ${response.statusText}`);
-                }
-                const csvText = await response.text();
-                
-                // CSV'yi ayrıştır
-                allNews = parseCSV(csvText);
+    // --- CSV Ayrıştırıcı ---
+    function parseCSV(csvText) {
+      const lines = csvText.trim().split('\n');
+      if (lines.length === 0) return [];
 
-                // Haberleri tarihe göre ters sırada sırala (en yeniyi en üste getir)
-                allNews.sort((a, b) => {
-                    const dateA = new Date(`${a.Tarih.split('.').reverse().join('-')}T${a.Saat}:00`);
-                    const dateB = new Date(`${b.Tarih.split('.').reverse().join('-')}T${b.Saat}:00`);
-                    return dateB - dateA;
-                });
+      const headers = lines[0].split(';');
+      const data = [];
 
-                filterNews(); // Tüm haberleri başta göster
-            } catch (error) {
-                console.error("Haberleri çekerken hata oluştu:", error);
-                loadingSpinner.innerHTML = `<p class="text-red-600 font-semibold">❌ Arşiv yüklenemedi. Python betiğinin CSV dosyasını depoya kaydettiğinden emin olun. Hata: ${error.message}</p>`;
-            } finally {
-                loadingSpinner.classList.add('hidden');
-            }
-        }
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(';');
+        if (values.length !== headers.length) continue;
+        const item = {};
+        headers.forEach((header, index) => {
+          item[header.trim()] = values[index].trim();
+        });
+        data.push(item);
+      }
+      return data;
+    }
 
-        // --- Filtreleme Fonksiyonu ---
-        function filterNews() {
-            const query = searchInput.value.toLowerCase().trim();
-            newsListElement.innerHTML = '';
-            
-            const filteredNews = allNews.filter(news => {
-                if (!query) return true; // Arama boşsa hepsini göster
+    // --- CSV'den Haberleri Çek ---
+    async function fetchAndRenderNews() {
+      loadingSpinner.classList.remove('hidden');
+      newsListElement.innerHTML = '';
+      
+      try {
+        const response = await fetch(CSV_FILE_PATH + `?t=${Date.now()}`); // cache bypass
+        if (!response.ok) throw new Error(`Dosya yüklenemedi (${response.statusText})`);
+        const csvText = await response.text();
+        
+        allNews = parseCSV(csvText);
 
-                // Arama sorgusunu Konu, Tarih veya Saat alanlarında ara
-                return news.Konu.toLowerCase().includes(query) ||
-                       news.Tarih.includes(query) ||
-                       news.Saat.includes(query);
-            });
+        // Tarihe göre sırala
+        allNews.sort((a, b) => {
+          const dateA = new Date(`${a.Tarih.split('.').reverse().join('-')}T${a.Saat || '00:00'}:00`);
+          const dateB = new Date(`${b.Tarih.split('.').reverse().join('-')}T${b.Saat || '00:00'}:00`);
+          return dateB - dateA;
+        });
 
-            renderNews(filteredNews);
-        }
+        filterNews();
+      } catch (err) {
+        loadingSpinner.innerHTML = `<p class="text-red-600 font-semibold">❌ Arşiv yüklenemedi: ${err.message}</p>`;
+      } finally {
+        loadingSpinner.classList.add('hidden');
+      }
+    }
 
-        // --- Haberleri Ekrana Çizme ---
-        function renderNews(newsToRender) {
-            newsListElement.innerHTML = '';
-            
-            if (newsToRender.length === 0) {
-                noResultsElement.classList.remove('hidden');
-            } else {
-                noResultsElement.classList.add('hidden');
-            }
+    // --- Filtreleme ---
+    function filterNews() {
+      const query = searchInput.value.toLowerCase().trim();
+      const filtered = allNews.filter(news =>
+        !query ||
+        (news.Konu?.toLowerCase().includes(query)) ||
+        (news.Tarih?.includes(query)) ||
+        (news.Saat?.includes(query))
+      );
+      renderNews(filtered);
+    }
 
-            newsToRender.forEach(news => {
-                // Matriks URL'si tam yol değilse, tam yol yapmak için öne 'https://www.matriksdata.com' ekle
-                const fullUrl = news.URL.startsWith('http') ? news.URL : `https://www.matriksdata.com${news.URL}`;
+    // --- Listeleme ---
+    function renderNews(newsToRender) {
+      newsListElement.innerHTML = '';
+      if (newsToRender.length === 0) {
+        noResultsElement.classList.remove('hidden');
+      } else {
+        noResultsElement.classList.add('hidden');
+      }
 
-                const cardHtml = `
-                    <a href="${fullUrl}" target="_blank" rel="noopener noreferrer" class="card block bg-white p-5 rounded-xl shadow-md border border-gray-100 hover:border-blue-300">
-                        <div class="flex items-center space-x-3 text-sm font-medium text-blue-600 mb-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span>${news.Tarih} ${news.Saat}</span>
-                        </div>
-                        <h2 class="text-lg font-semibold text-gray-800 mb-2 leading-tight">${news.Konu}</h2>
-                        <span class="inline-block mt-2 text-xs text-blue-500 hover:text-blue-700">Habere Git →</span>
-                    </a>
-                `;
-                newsListElement.insertAdjacentHTML('beforeend', cardHtml);
-            });
-            
-            newsCountElement.textContent = newsToRender.length;
-        }
+      newsToRender.forEach(news => {
+        const fullUrl = news.URL?.startsWith('http')
+          ? news.URL
+          : `https://www.matriksdata.com${news.URL || ''}`;
+        const html = `
+          <a href="${fullUrl}" target="_blank" rel="noopener noreferrer"
+             class="card block bg-white p-5 rounded-xl shadow-md border border-gray-100 hover:border-blue-300">
+            <div class="flex items-center space-x-3 text-sm font-medium text-blue-600 mb-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>${news.Tarih} ${news.Saat}</span>
+            </div>
+            <h2 class="text-lg font-semibold text-gray-800 mb-2 leading-tight">${news.Konu}</h2>
+            <span class="inline-block mt-2 text-xs text-blue-500 hover:text-blue-700">Habere Git →</span>
+          </a>`;
+        newsListElement.insertAdjacentHTML('beforeend', html);
+      });
+      newsCountElement.textContent = newsToRender.length;
+    }
 
-        // Sayfa yüklendiğinde verileri çek
-        window.onload = fetchAndRenderNews;
-    </script>
+    window.onload = fetchAndRenderNews;
+  </script>
 </body>
 </html>
