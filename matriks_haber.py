@@ -98,7 +98,6 @@ def haberleri_ayristir_ve_kaydet():
             print("ℹ️ Yeni haber yok, mevcut verilerle devam ediliyor.")
         except FileNotFoundError:
             print("⚠️ Henüz hiç haber kaydı yok.")
-            # Eğer dosya yoksa ve veri çekilmediyse HTML oluşturma adımını atla
             return
 
     # 5. HTML Sayfası Oluştur
@@ -110,15 +109,11 @@ def haberleri_ayristir_ve_kaydet():
         
         # 5b. En Güncel Haber Bilgisini Bul
         if not df_final.empty:
-            # Tarih ve Saat sütunlarını birleştirip Datetime objesine çeviriyoruz
             df_final['Tarih_Saat'] = pd.to_datetime(df_final['Tarih'] + ' ' + df_final['Saat'], format='%d.%m.%Y %H:%M')
-            
-            # En yeni tarihi bul
             en_yeni_haber_tarihi = df_final['Tarih_Saat'].max().strftime('%d.%m.%Y %H:%M')
-            
-            haber_guncelligi_mesaji = f"<p class='latest-news'>Arşivdeki En Yeni Haber: **{en_yeni_haber_tarihi}**</p>"
+            haber_guncelligi_mesaji = f"<div class='latest-news'>🕓 En Güncel Haber: <b>{en_yeni_haber_tarihi}</b></div>"
         else:
-            haber_guncelligi_mesaji = "<p class='latest-news'>Arşivde henüz haber bulunmuyor.</p>"
+            haber_guncelligi_mesaji = "<div class='latest-news'>Arşivde henüz haber bulunmuyor.</div>"
             
         # 5c. HTML Başlığı Oluşturma
         html_baslik = f"""
@@ -136,6 +131,21 @@ def haberleri_ayristir_ve_kaydet():
                 }}
                 h1 {{
                     color: #222;
+                    margin-bottom: 10px;
+                }}
+                .latest-news {{
+                    font-size: 1.2em;
+                    font-weight: 600;
+                    color: #007bff;
+                    border-bottom: 3px solid #007bff;
+                    display: inline-block;
+                    margin-bottom: 20px;
+                    padding-bottom: 5px;
+                }}
+                .update-time {{
+                    font-size: 0.9em;
+                    color: #666;
+                    margin-bottom: 15px;
                 }}
                 table {{
                     border-collapse: collapse;
@@ -154,20 +164,6 @@ def haberleri_ayristir_ve_kaydet():
                 tr:hover {{
                     background-color: #f9f9f9;
                 }}
-                .update-time {{
-                    font-size: 0.9em;
-                    color: #666;
-                }}
-                .latest-news {{
-                    font-size: 1.1em;
-                    font-weight: 600;
-                    color: #007bff; /* Mavi renkte vurgu */
-                    border-bottom: 2px solid #007bff;
-                    padding-bottom: 5px;
-                    display: inline-block;
-                    margin-top: 15px;
-                    margin-bottom: 15px;
-                }}
                 .footer {{
                     margin-top: 20px;
                     font-size: 0.9em;
@@ -177,9 +173,8 @@ def haberleri_ayristir_ve_kaydet():
         </head>
         <body>
             <h1>📰 Matriks Haber Arşivi</h1>
+            {haber_guncelligi_mesaji}
             <p class="update-time">Son Otomasyon Çalışma Saati (TR): {son_otomasyon_guncellemesi}</p>
-            {haber_guncelligi_mesaji.replace('**', '<b>').replace('**', '</b>')}
-            
         """
 
         html_tablo = df_final.to_html(index=False, escape=False, border=0)
