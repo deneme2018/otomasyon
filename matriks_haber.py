@@ -87,11 +87,6 @@ def haberleri_ayristir_ve_kaydet():
             df_final = pd.concat([df_eski, df_yeni], ignore_index=True)
         except FileNotFoundError:
             df_final = pd.DataFrame(data)
-
-        df_final.to_csv(CSV_FILENAME, sep=";", encoding="utf-8-sig", index=False)
-        id_kontrol_dosyasini_kaydet(ID_DOSYA, kayitli_idler)
-
-        print(f"✅ {len(data)} yeni haber eklendi.")
     else:
         try:
             df_final = pd.read_csv(CSV_FILENAME, sep=";", encoding="utf-8-sig")
@@ -100,21 +95,33 @@ def haberleri_ayristir_ve_kaydet():
             print("⚠️ Henüz hiç haber kaydı yok.")
             return
 
+    # 📅 Tarih + Saat birleştir ve azalan sırala (en güncel en üstte)
+    df_final["Tarih_Saat"] = pd.to_datetime(
+        df_final["Tarih"] + " " + df_final["Saat"],
+        format="%d.%m.%Y %H:%M",
+        errors="coerce"
+    )
+    df_final = df_final.sort_values(by="Tarih_Saat", ascending=False)
+
+    # 🔄 CSV kaydet (artık sıralı)
+    df_final.to_csv(CSV_FILENAME, sep=";", encoding="utf-8-sig", index=False)
+    id_kontrol_dosyasini_kaydet(ID_DOSYA, kayitli_idler)
+    print(f"✅ {len(data)} yeni haber eklendi." if data else "✅ Veri güncel, sadece sıralama yenilendi.")
+
     # 5. HTML Sayfası Oluştur
     try:
         # 5a. Otomasyon Çalışma Saati (TR Saati)
         utc_now = datetime.now()
         tr_now = utc_now + timedelta(hours=3)
         son_otomasyon_guncellemesi = tr_now.strftime("%Y-%m-%d %H:%M")
-        
+
         # 5b. En Güncel Haber Bilgisini Bul
         if not df_final.empty:
-            df_final['Tarih_Saat'] = pd.to_datetime(df_final['Tarih'] + ' ' + df_final['Saat'], format='%d.%m.%Y %H:%M')
-            en_yeni_haber_tarihi = df_final['Tarih_Saat'].max().strftime('%d.%m.%Y %H:%M')
+            en_yeni_haber_tarihi = df_final["Tarih_Saat"].max().strftime("%d.%m.%Y %H:%M")
             haber_guncelligi_mesaji = f"<div class='latest-news'>🕓 En Güncel Haber: <b>{en_yeni_haber_tarihi}</b></div>"
         else:
             haber_guncelligi_mesaji = "<div class='latest-news'>Arşivde henüz haber bulunmuyor.</div>"
-            
+
         # 5c. HTML Başlığı Oluşturma
         html_baslik = f"""
         <html lang="tr">
@@ -177,7 +184,7 @@ def haberleri_ayristir_ve_kaydet():
             <p class="update-time">Son Otomasyon Çalışma Saati (TR): {son_otomasyon_guncellemesi}</p>
         """
 
-        html_tablo = df_final.to_html(index=False, escape=False, border=0)
+        html_tablo = df_final.drop(columns=["Tarih_Saat"]).to_html(index=False, escape=False, border=0)
         html_son = f"""
             {html_tablo}
             <div class="footer">
