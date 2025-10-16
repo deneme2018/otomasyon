@@ -11,30 +11,30 @@ CSV_FILENAME = "matriks_haber_arsivi.csv"
 ID_DOSYA = "kayitli_haber_idleri.txt"
 HTML_FILENAME = "index.html"
 
+
 def id_kontrol_dosyasini_yukle(id_dosya_adi):
-    """Daha önce kaydedilmiş haber ID'lerini dosyadan yükler."""
     try:
         with open(id_dosya_adi, "r", encoding="utf-8") as f:
             return set(f.read().splitlines())
     except FileNotFoundError:
         return set()
 
+
 def id_kontrol_dosyasini_kaydet(id_dosya_adi, kayitli_idler):
-    """Güncel haber ID'leri kümesini dosyaya kaydeder."""
     with open(id_dosya_adi, "w", encoding="utf-8") as f:
         f.write("\n".join(sorted(list(kayitli_idler))))
 
+
 def temiz_konu_olustur(konu_ham):
-    """Konu metnini CSV/HTML uyumlu hale getirir."""
     konu = konu_ham.replace("\n", " ").replace("\r", " ").replace("\t", " ")
     konu = re.sub(r"\s+", " ", konu).strip()
     konu = konu.replace(";", ",").replace('"', "'")
     return konu
 
+
 def haberleri_ayristir_ve_kaydet():
     print(f"🔄 Matriks haberleri {MATRIKS_HABER_URL} adresinden çekiliyor...")
 
-    # 1. HTML İçeriğini Çek
     try:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
         response = requests.get(MATRIKS_HABER_URL, headers=headers, timeout=10)
@@ -45,11 +45,9 @@ def haberleri_ayristir_ve_kaydet():
         print(f"❌ Hata: URL'ye erişilemedi: {e}")
         return
 
-    # 2. Kayıtlı ID'leri yükle
     kayitli_idler = id_kontrol_dosyasini_yukle(ID_DOSYA)
     print(f"Yüklenen kayıtlı ID sayısı: {len(kayitli_idler)}")
 
-    # 3. HTML'i ayrıştır
     soup = BeautifulSoup(html_icerik, "html.parser")
     haber_satirlari = soup.find_all("tr", style=re.compile("cursor:pointer;"))
     id_deseni = re.compile(r"/(\d+)-")
@@ -79,7 +77,6 @@ def haberleri_ayristir_ve_kaydet():
             })
             kayitli_idler.add(haber_id)
 
-    # 4. CSV Güncelle
     if data:
         try:
             df_eski = pd.read_csv(CSV_FILENAME, sep=";", encoding="utf-8-sig")
@@ -87,6 +84,10 @@ def haberleri_ayristir_ve_kaydet():
             df_final = pd.concat([df_eski, df_yeni], ignore_index=True)
         except FileNotFoundError:
             df_final = pd.DataFrame(data)
+
+        df_final.to_csv(CSV_FILENAME, sep=";", encoding="utf-8-sig", index=False)
+        id_kontrol_dosyasini_kaydet(ID_DOSYA, kayitli_idler)
+        print(f"✅ {len(data)} yeni haber eklendi.")
     else:
         try:
             df_final = pd.read_csv(CSV_FILENAME, sep=";", encoding="utf-8-sig")
@@ -95,34 +96,24 @@ def haberleri_ayristir_ve_kaydet():
             print("⚠️ Henüz hiç haber kaydı yok.")
             return
 
-    # 📅 Tarih + Saat birleştir ve azalan sırala (en güncel en üstte)
-    df_final["Tarih_Saat"] = pd.to_datetime(
-        df_final["Tarih"] + " " + df_final["Saat"],
-        format="%d.%m.%Y %H:%M",
-        errors="coerce"
+    # --- En güncel haber en üstte olacak şekilde sırala ---
+    df_final['Tarih_Saat'] = pd.to_datetime(df_final['Tarih'] + ' ' + df_final['Saat'], format='%d.%m.%Y %H:%M')
+    df_final = df_final.sort_values(by='Tarih_Saat', ascending=False)
+
+    # Konu sütununu link haline getir
+    df_final['Konu'] = df_final.apply(
+        lambda row: f"<a href='{row['URL']}' target='_blank'>{row['Konu']}</a>", axis=1
     )
-    df_final = df_final.sort_values(by="Tarih_Saat", ascending=False)
 
-    # 🔄 CSV kaydet (artık sıralı)
-    df_final.to_csv(CSV_FILENAME, sep=";", encoding="utf-8-sig", index=False)
-    id_kontrol_dosyasini_kaydet(ID_DOSYA, kayitli_idler)
-    print(f"✅ {len(data)} yeni haber eklendi." if data else "✅ Veri güncel, sadece sıralama yenilendi.")
+    # URL sütununu artık gizliyoruz
+    df_final = df_final.drop(columns=["URL"])
 
-    # 5. HTML Sayfası Oluştur
+    # HTML sayfası oluşturma
     try:
-        # 5a. Otomasyon Çalışma Saati (TR Saati)
-        utc_now = datetime.now()
-        tr_now = utc_now + timedelta(hours=3)
+        tr_now = datetime.now() + timedelta(hours=3)
         son_otomasyon_guncellemesi = tr_now.strftime("%Y-%m-%d %H:%M")
+        en_yeni_haber_tarihi = df_final['Tarih_Saat'].max().strftime('%d.%m.%Y %H:%M')
 
-        # 5b. En Güncel Haber Bilgisini Bul
-        if not df_final.empty:
-            en_yeni_haber_tarihi = df_final["Tarih_Saat"].max().strftime("%d.%m.%Y %H:%M")
-            haber_guncelligi_mesaji = f"<div class='latest-news'>🕓 En Güncel Haber: <b>{en_yeni_haber_tarihi}</b></div>"
-        else:
-            haber_guncelligi_mesaji = "<div class='latest-news'>Arşivde henüz haber bulunmuyor.</div>"
-
-        # 5c. HTML Başlığı Oluşturma
         html_baslik = f"""
         <html lang="tr">
         <head>
@@ -138,21 +129,6 @@ def haberleri_ayristir_ve_kaydet():
                 }}
                 h1 {{
                     color: #222;
-                    margin-bottom: 10px;
-                }}
-                .latest-news {{
-                    font-size: 1.2em;
-                    font-weight: 600;
-                    color: #007bff;
-                    border-bottom: 3px solid #007bff;
-                    display: inline-block;
-                    margin-bottom: 20px;
-                    padding-bottom: 5px;
-                }}
-                .update-time {{
-                    font-size: 0.9em;
-                    color: #666;
-                    margin-bottom: 15px;
                 }}
                 table {{
                     border-collapse: collapse;
@@ -171,6 +147,27 @@ def haberleri_ayristir_ve_kaydet():
                 tr:hover {{
                     background-color: #f9f9f9;
                 }}
+                a {{
+                    text-decoration: none;
+                    color: #007bff;
+                }}
+                a:hover {{
+                    text-decoration: underline;
+                }}
+                .update-time {{
+                    font-size: 0.9em;
+                    color: #666;
+                }}
+                .latest-news {{
+                    font-size: 1.1em;
+                    font-weight: 600;
+                    color: #007bff;
+                    border-bottom: 2px solid #007bff;
+                    padding-bottom: 5px;
+                    display: inline-block;
+                    margin-top: 15px;
+                    margin-bottom: 15px;
+                }}
                 .footer {{
                     margin-top: 20px;
                     font-size: 0.9em;
@@ -180,11 +177,11 @@ def haberleri_ayristir_ve_kaydet():
         </head>
         <body>
             <h1>📰 Matriks Haber Arşivi</h1>
-            {haber_guncelligi_mesaji}
             <p class="update-time">Son Otomasyon Çalışma Saati (TR): {son_otomasyon_guncellemesi}</p>
+            <p class="latest-news">Arşivdeki En Yeni Haber: <b>{en_yeni_haber_tarihi}</b></p>
         """
 
-        html_tablo = df_final.drop(columns=["Tarih_Saat"]).to_html(index=False, escape=False, border=0)
+        html_tablo = df_final.to_html(index=False, escape=False, border=0)
         html_son = f"""
             {html_tablo}
             <div class="footer">
@@ -200,6 +197,7 @@ def haberleri_ayristir_ve_kaydet():
         print(f"✅ HTML sayfası '{HTML_FILENAME}' dosyasına kaydedildi.")
     except Exception as e:
         print(f"❌ HTML oluşturulamadı: {e}")
+
 
 if __name__ == "__main__":
     haberleri_ayristir_ve_kaydet()
