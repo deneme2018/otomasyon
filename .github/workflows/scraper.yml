@@ -1,8 +1,11 @@
+# scraper.yml
+
 name: Scraper
 
 on:
   schedule:
-    - cron: '0 5,17 * * *'
+    # Türkiye saatine göre 09:00, 15:00 ve 19:00'a denk gelir
+    - cron: '0 6,12,16 * * *'
   workflow_dispatch:
 
 permissions:
