@@ -1,64 +1,33 @@
-name: Matriks Haberleri Günlük Çekim
-
-# İş akışının ne zaman çalışacağını belirler
+name: Scraper
 
 on:
-  # Bu, GitHub arayüzünden manuel olarak tetikleme imkanı verir
-  workflow_dispatch:
-
   schedule:
-    # Cron zamanlaması UTC (Eşgüdümlü Evrensel Zaman) kullanır.
-    # Türkiye Saati (TRT/GMT+3) olduğu için 3 saat geri alınıp UTC saatleri belirlenmiştir:
-    # 09:00 TRT -> 06:00 UTC
-    # 15:00 TRT -> 12:00 UTC
-    # 19:00 TRT -> 16:00 UTC
-    - cron: "0 6,12,16 * * *" # Her gün 3 farklı saatte çalışır
+    # Her gün saat 08:00 ve 20:00'de çalışır (UTC)
+    - cron: '0 5,17 * * *'
+  workflow_dispatch:  # Manuel tetikleme için
 
 jobs:
   run-scraper:
-    # Botun değişen CSV ve ID dosyalarını depoya yazması için bu yetki ZORUNLUDUR.
-    permissions:
-      contents: write
-      
     runs-on: ubuntu-latest
-
     steps:
-      - name: Depoyu Çıkar (Checkout)
+      - name: Kodu çek
         uses: actions/checkout@v4
 
-      - name: Python 3.10 Kurulumu
+      - name: Python ortamını kur
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
-      - name: Gerekli Kütüphaneleri Kur (requests, bs4, pandas)
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests beautifulsoup4 pandas
-          # Eğer bir requirements.txt dosyanız varsa, bunun yerine
-          # pip install -r requirements.txt
-          # komutunu da kullanabilirsiniz.
+      - name: Bağımlılıkları yükle
+        run: pip install -r requirements.txt
 
-      # Python dosyanızın adının 'matriks_haber.py' olduğunu varsayıyoruz.
-      - name: Haberleri Çek ve Arşivleri Güncelle
+      - name: Scraper’ı çalıştır
         run: python matriks_haber.py
 
-      # --- COMMIT VE PUSH İŞLEMİ (Değişen dosyaları kaydetme) ---
-      - name: Değişen Dosyaları Kaydet ve GitHub'a Yükle
+      - name: Değişiklikleri kaydet ve pushla
         run: |
-          # Otomatik commit için bot kimliğini ayarla
-          git config user.name github-actions[bot]
-          git config user.email github-actions[bot]@users.noreply.github.com
-          
-          # Oluşan/güncellenen dosyaları Git'e ekle
-          git add matriks_haber_arsivi.csv kayitli_haber_idleri.txt
-          
-          # Eğer 'git add' işleminden sonra bir değişiklik tespit edilirse commit yap
-          if git diff --cached --exit-code; then
-            echo "Yeni değişiklik yok, commit atlanıyor."
-          else
-            # Değişiklik varsa commit ve push işlemini yap
-            git commit -m "🤖 [Automated] Matriks haberleri güncellendi (Tarih: $(date +%Y-%m-%d))"
-            git push
-          fi
-```eof
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "[Automated] Matriks haberleri güncellendi (Tarih: $(date '+%Y-%m-%d %H:%M'))" || echo "Değişiklik yok"
+          git push
