@@ -105,8 +105,9 @@ def haberleri_ayristir_ve_kaydet():
         lambda row: f"<a href='{row['URL']}' target='_blank'>{row['Konu']}</a>", axis=1
     )
 
-    # URL sütununu artık gizliyoruz
+    # 🛑 Düzeltme: URL ve sıralama için kullanılan Tarih_Saat sütunlarını silin
     df_final = df_final.drop(columns=["URL"])
+    df_final = df_final.drop(columns=["Tarih_Saat"]) # <-- Bu, index.html'deki fazla sütunu siler
 
     # HTML sayfası oluşturma
     try:
@@ -122,37 +123,54 @@ def haberleri_ayristir_ve_kaydet():
             <title>Matriks Haber Arşivi</title>
             <style>
                 body {{
-                    font-family: 'Segoe UI', sans-serif;
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                     background: #f8f9fa;
                     color: #333;
                     padding: 30px;
                 }}
                 h1 {{
                     color: #222;
+                    border-bottom: 2px solid #007bff;
+                    padding-bottom: 10px;
                 }}
                 table {{
                     border-collapse: collapse;
-                    width: 100%;
+                    width: 100%; /* Tabloyu sayfa genişliğine yayar */
                     background: #fff;
-                    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+                    margin-top: 20px;
                 }}
                 th, td {{
                     border: 1px solid #ddd;
-                    padding: 8px;
+                    padding: 12px; /* Hücre içlerini genişletir */
                     text-align: left;
                 }}
                 th {{
-                    background: #f0f0f0;
+                    background: #007bff; /* Başlık rengini belirginleştirir */
+                    color: white;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                }}
+                td:nth-child(1), td:nth-child(2) {{
+                    width: 10%; /* Tarih ve Saat sütunlarını daraltır */
+                    text-align: center;
+                    white-space: nowrap;
+                }}
+                tr:nth-child(even) {{ /* Çift satırları renklendirir */
+                    background-color: #f2f2f2;
                 }}
                 tr:hover {{
-                    background-color: #f9f9f9;
+                    background-color: #ddd;
                 }}
                 a {{
                     text-decoration: none;
-                    color: #007bff;
+                    color: #333; /* Link rengini koyu yapar */
+                    font-weight: 600;
+                    display: block; /* Tüm hücreye tıklanabilir yapar */
                 }}
                 a:hover {{
                     text-decoration: underline;
+                    color: #007bff; /* Hover rengini mavi yapar */
                 }}
                 .update-time {{
                     font-size: 0.9em;
@@ -162,8 +180,6 @@ def haberleri_ayristir_ve_kaydet():
                     font-size: 1.1em;
                     font-weight: 600;
                     color: #007bff;
-                    border-bottom: 2px solid #007bff;
-                    padding-bottom: 5px;
                     display: inline-block;
                     margin-top: 15px;
                     margin-bottom: 15px;
