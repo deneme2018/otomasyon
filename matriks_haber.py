@@ -100,20 +100,20 @@ def haberleri_ayristir_ve_kaydet():
     df_final['Tarih_Saat'] = pd.to_datetime(df_final['Tarih'] + ' ' + df_final['Saat'], format='%d.%m.%Y %H:%M')
     df_final = df_final.sort_values(by='Tarih_Saat', ascending=False)
 
-    # Konu sütununu link haline getir
-    df_final['Konu'] = df_final.apply(
-        lambda row: f"<a href='{row['URL']}' target='_blank'>{row['Konu']}</a>", axis=1
-    )
-
-    # 🛑 Düzeltme: URL ve sıralama için kullanılan Tarih_Saat sütunlarını silin
-    df_final = df_final.drop(columns=["URL"])
-    df_final = df_final.drop(columns=["Tarih_Saat"]) # <-- Bu, index.html'deki fazla sütunu siler
-
     # HTML sayfası oluşturma
     try:
         tr_now = datetime.now() + timedelta(hours=3)
         son_otomasyon_guncellemesi = tr_now.strftime("%Y-%m-%d %H:%M")
+        # ✅ DÜZELTME: Tarih_Saat sütununu silmeden önce kullan
         en_yeni_haber_tarihi = df_final['Tarih_Saat'].max().strftime('%d.%m.%Y %H:%M')
+
+        # Konu sütununu link haline getir
+        df_final['Konu'] = df_final.apply(
+            lambda row: f"<a href='{row['URL']}' target='_blank'>{row['Konu']}</a>", axis=1
+        )
+
+        # ✅ DÜZELTME: URL ve Tarih_Saat sütunlarını şimdi sil
+        df_final = df_final.drop(columns=["URL", "Tarih_Saat"])
 
         html_baslik = f"""
         <html lang="tr">
@@ -135,28 +135,28 @@ def haberleri_ayristir_ve_kaydet():
                 }}
                 table {{
                     border-collapse: collapse;
-                    width: 100%; /* Tabloyu sayfa genişliğine yayar */
+                    width: 100%;
                     background: #fff;
                     box-shadow: 0 0 15px rgba(0,0,0,0.1);
                     margin-top: 20px;
                 }}
                 th, td {{
                     border: 1px solid #ddd;
-                    padding: 12px; /* Hücre içlerini genişletir */
+                    padding: 12px;
                     text-align: left;
                 }}
                 th {{
-                    background: #007bff; /* Başlık rengini belirginleştirir */
+                    background: #007bff;
                     color: white;
                     text-transform: uppercase;
                     letter-spacing: 1px;
                 }}
                 td:nth-child(1), td:nth-child(2) {{
-                    width: 10%; /* Tarih ve Saat sütunlarını daraltır */
+                    width: 10%;
                     text-align: center;
                     white-space: nowrap;
                 }}
-                tr:nth-child(even) {{ /* Çift satırları renklendirir */
+                tr:nth-child(even) {{
                     background-color: #f2f2f2;
                 }}
                 tr:hover {{
@@ -164,13 +164,13 @@ def haberleri_ayristir_ve_kaydet():
                 }}
                 a {{
                     text-decoration: none;
-                    color: #333; /* Link rengini koyu yapar */
+                    color: #333;
                     font-weight: 600;
-                    display: block; /* Tüm hücreye tıklanabilir yapar */
+                    display: block;
                 }}
                 a:hover {{
                     text-decoration: underline;
-                    color: #007bff; /* Hover rengini mavi yapar */
+                    color: #007bff;
                 }}
                 .update-time {{
                     font-size: 0.9em;
