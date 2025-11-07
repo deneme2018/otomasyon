@@ -1,6 +1,6 @@
 # scraper.yml
 
-name: Scraper
+name: Scraper and Deploy
 
 on:
   schedule:
@@ -8,11 +8,17 @@ on:
     - cron: '0 6,12,16 * * *'
   workflow_dispatch:
 
+# Hem içerik yazma hem de Pages'a dağıtım için gerekli izinler
 permissions:
   contents: write
+  pages: write # Pages için eklendi
+  id-token: write # Pages için eklendi
 
 jobs:
-  run-scraper:
+  run-scraper-and-deploy: # Job adı değiştirildi
+    environment: # Pages için eklendi
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Kodu çek
@@ -29,6 +35,8 @@ jobs:
       - name: Scraper’ı çalıştır
         run: python matriks_haber.py
 
+      # --- BURADAN İTİBAREN DEĞİŞİKLİKLER BAŞLIYOR ---
+
       - name: Değişiklikleri kaydet ve pushla
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -36,5 +44,23 @@ jobs:
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add .
-          git commit -m "[Automated] Matriks haberleri güncellendi (Tarih: $(date '+%Y-%m-%d %H:%M'))" || echo "Değişiklik yok"
-          git push
+          # Sadece değişiklik varsa commit ve push yap:
+          if ! git diff --cached --exit-code; then
+            git commit -m "[Automated] Matriks haberleri güncellendi (Tarih: $(date '+%Y-%m-%d %H:%M'))"
+            git push
+          else
+            echo "Değişiklik yok, push atlanıyor."
+          fi
+
+      - name: Setup Pages # Pages için eklendi
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact # Pages için eklendi
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Tüm depoyu yükle
+          path: '.'
+
+      - name: Deploy to GitHub Pages # Pages için eklendi
+        id: deployment
+        uses: actions/deploy-pages@v4
