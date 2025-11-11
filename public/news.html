@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>Haberler</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; padding: 16px; }
+    .news-item { margin: 8px 0; padding: 12px; border: 1px solid #e0e0e0; border-radius: 4px; }
+    .controls { margin-bottom: 14px; display:flex; gap:12px; align-items:center; }
+    .small { font-size: 0.9em; color: #666; }
+  </style>
+</head>
+<body>
+  <h1>Haberler</h1>
+
+  <div class="controls">
+    <label>
+      <input id="include-kap-checkbox" type="checkbox">
+      KAP haberlerini dahil et
+    </label>
+    <span class="small">Tercih tarayıcıda saklanır</span>
+  </div>
+
+  <div id="news-list">
+    <!-- Örnek içerik: gerçekte burayı sunucudan çekilen veriler ile doldur -->
+    <div class="news-item" data-source="OTHER">
+      <strong>Diğer haber 1</strong><div class="small">Kaynak: Diğer</div>
+    </div>
+
+    <div class="news-item" data-source="KAP">
+      <strong>KAP haber 1</strong><div class="small">Kaynak: KAP</div>
+    </div>
+
+    <div class="news-item" data-source="KAP">
+      <strong>KAP haber 2</strong><div class="small">Kaynak: KAP</div>
+    </div>
+
+    <div class="news-item" data-source="OTHER">
+      <strong>Diğer haber 2</strong><div class="small">Kaynak: Diğer</div>
+    </div>
+  </div>
+
+  <script src="./kap-filter.js"></script>
+</body>
+</html>
