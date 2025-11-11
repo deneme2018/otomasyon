@@ -104,7 +104,6 @@ def haberleri_ayristir_ve_kaydet():
     try:
         tr_now = datetime.now() + timedelta(hours=3)
         son_otomasyon_guncellemesi = tr_now.strftime("%Y-%m-%d %H:%M")
-        # ✅ DÜZELTME: Tarih_Saat sütununu silmeden önce kullan
         en_yeni_haber_tarihi = df_final['Tarih_Saat'].max().strftime('%d.%m.%Y %H:%M')
 
         # Konu sütununu link haline getir
@@ -112,9 +111,19 @@ def haberleri_ayristir_ve_kaydet():
             lambda row: f"<a href='{row['URL']}' target='_blank'>{row['Konu']}</a>", axis=1
         )
 
-        # ✅ DÜZELTME: URL ve Tarih_Saat sütunlarını şimdi sil
+        # URL ve Tarih_Saat sütunlarını sil
         df_final = df_final.drop(columns=["URL", "Tarih_Saat"])
 
+        # Tabloyu oluştururken id="news-list" niteliğini ekle
+        html_tablo = df_final.to_html(
+            index=False, 
+            escape=False, 
+            border=0, 
+            classes='news-table',
+            table_id='news-list' # Filtreleme için gerekli ID eklendi
+        )
+        
+        # Style bloğuna filtreleme için gerekli CSS'i ekle
         html_baslik = f"""
         <html lang="tr">
         <head>
@@ -133,7 +142,7 @@ def haberleri_ayristir_ve_kaydet():
                     border-bottom: 2px solid #007bff;
                     padding-bottom: 10px;
                 }}
-                table {{
+                .news-table {{ /* to_html tarafından eklenen class */
                     border-collapse: collapse;
                     width: 100%;
                     background: #fff;
@@ -156,10 +165,11 @@ def haberleri_ayristir_ve_kaydet():
                     text-align: center;
                     white-space: nowrap;
                 }}
-                tr:nth-child(even) {{
+                /* to_html varsayılan olarak thead, tbody kullanır, bu yüzden bu seçicileri kullanabiliriz */
+                tbody tr:nth-child(even) {{
                     background-color: #f2f2f2;
                 }}
-                tr:hover {{
+                tbody tr:hover {{
                     background-color: #ddd;
                 }}
                 a {{
@@ -184,6 +194,19 @@ def haberleri_ayristir_ve_kaydet():
                     margin-top: 15px;
                     margin-bottom: 15px;
                 }}
+                /* KAP filtresi için eklenen CSS */
+                .controls {{ 
+                    margin-top: 20px;
+                    margin-bottom: 14px; 
+                    display:flex; 
+                    gap:12px; 
+                    align-items:center; 
+                }}
+                .small {{ 
+                    font-size: 0.9em; 
+                    color: #666; 
+                }}
+                /* --- */
                 .footer {{
                     margin-top: 20px;
                     font-size: 0.9em;
@@ -195,14 +218,22 @@ def haberleri_ayristir_ve_kaydet():
             <h1>📰 Matriks Haber Arşivi</h1>
             <p class="update-time">Son Otomasyon Çalışma Saati (TR): {son_otomasyon_guncellemesi}</p>
             <p class="latest-news">Arşivdeki En Yeni Haber: <b>{en_yeni_haber_tarihi}</b></p>
-        """
+            
+            <div class="controls">
+              <label>
+                <input id="include-kap-checkbox" type="checkbox">
+                KAP haberlerini dahil et
+              </label>
+              <span class="small">Tercih tarayıcıda saklanır</span>
+            </div>
+            """
 
-        html_tablo = df_final.to_html(index=False, escape=False, border=0)
         html_son = f"""
             {html_tablo}
             <div class="footer">
                 <p>Bu sayfa otomatik olarak oluşturulmuştur.</p>
             </div>
+            <script src="./kap-filter.js"></script>
         </body>
         </html>
         """
